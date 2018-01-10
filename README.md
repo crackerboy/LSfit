@@ -12,3 +12,6 @@ Fitting method using Levenberg-Marquardt algorithm.
 
 ### Usual_functions
 Some functions you may need for fitting, such as Gaussian and Moffat (both in 1D and 2D)
+
+### Test_***
+Test files. Feel free to use them to handle LSfit
