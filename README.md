@@ -8,6 +8,9 @@ I provide my code here if you need it, however I am not an expert in Python. Be 
 ### LSfit
 Fitting method using Levenberg-Marquardt algorithm.
 
+### newton
+Newton's algorithm, to find the solution of f(X)=0
+
 ### Usual_functions
 Some functions you may need for fitting, such as Gaussian and Moffat (both in 1D and 2D)
 
