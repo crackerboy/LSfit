@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Created on Tue Jan 02 17:57:41 2018
+Updated on Sat Jan 13 13:01:00 2018
 
 WEIGHTS = 1/sigma^2 for a homogeneous gaussian noise
 WEIGHTS = 1/data for a Poisson-like noise
@@ -9,7 +10,6 @@ TO-DO
 - Create a LSfit2D(.)
 - Define more precisely stopping criteria for algorithm
 - Check Levenberg-Marquardt regularization
-- String formatting for "eval(.)" is ugly, improve that
 - Check the WEIGHTED least-square convergence
 
 @author: rfetick
@@ -17,10 +17,11 @@ TO-DO
 
 # arange might be used as a string in eval('arange(.)')
 # so I let it, whatever the warning says
-from numpy import size, zeros, arange, array, dot, eye, diag
+from numpy import size, zeros, arange, array, dot, diag
 from scipy.linalg import inv
 
-def LSfit(funct_str,data,X,param0, weights=-1, quiet=False, LM=False):
+
+def LSfit(funct,data,X,param0, weights=-1, quiet=False, LM=False):
     """
     ### USAGE ###
      Least-square minimization algorithm.
@@ -30,27 +31,27 @@ def LSfit(funct_str,data,X,param0, weights=-1, quiet=False, LM=False):
      "data" is the noisy observation
      "f(X,param)" is your model, set by the vector of parameters "param" and evaluated on coordinates X
     ### INPUTS ###
-     funct_str - [String] Name of the function to call
-     data      - [Vector] Noisy data
-     X         - [Vector] Coordinates where to evaluate the function
-     param0    - [Vector] First estimation of parameters
+     funct   - [Function] The function to call
+     data    - [Vector] Noisy data
+     X       - [Vector] Coordinates where to evaluate the function
+     param0  - [Vector] First estimation of parameters
     ### OPTIONAL INPUTS ###
-     weights   - [Vector] Weights (1/noise^2) on each coordinate X
+     weights - [Vector] Weights (1/noise^2) on each coordinate X
                   Default : no weighting (weights=1)
                   weights = 1/sigma^2 for a gaussian noise
                   weights = 1/data for a Poisson-like noise
-     quiet     - [Boolean] Don't print status of algorithm
+     quiet   - [Boolean] Don't print status of algorithm
                   Default : quiet = False
-     LM        - [Boolean] Levenberg-Marquardt algorithm
+     LM      - [Boolean] Levenberg-Marquardt algorithm
                   Default : LM = False
     ### OUTPUT ###
-     param     - [Vector] Best parameters for least-square fitting
+     param   - [Vector] Best parameters for least-square fitting
     """
     # INITIALIZATION
     sX = size(X)
     sP = size(param0)
     J = zeros((sX,sP)) # Jacobian
-    h = 1e-10 #step to compute Jacobian
+    h = 1e-9 #step to compute Jacobian
     param = param0.copy()
     
     # STOPPING CONDITIONS
@@ -71,32 +72,18 @@ def LSfit(funct_str,data,X,param0, weights=-1, quiet=False, LM=False):
     if LM:
         mu = 1
     
-    # FORMAT Xstr for eval(.)
-    # Ugly method :(
-    Xstr = _array2str(X)
-    
     # LOOP
     i = 0
     while (i < max_iter) and not stop_loop:
         
-        # FORMAT Pstr for eval(.)
-        # Ugly method :(
-        Pstr = _array2str(param)
-        
-        f_str = funct_str+'('+Xstr+','+Pstr+')'
-        f = eval(f_str)
+        f = funct(array(X),array(param))
         
         ## Iterate over each parameter to compute derivative
         for ip in arange(sP):
             dparam = zeros(sP)
             dparam[ip] = h
             
-            # FORMAT dPstr for eval(.)
-            # Ugly method :(
-            dPstr = _array2str(dparam)
-            
-            df_str = funct_str+'('+Xstr+','+Pstr+'+'+dPstr+')'
-            J[:,ip] = weights*(eval(df_str)-f)/h
+            J[:,ip] = weights*(funct(array(X),array(param)+array(dparam))-f)/h
         
         ## Compute dparam = -{(transpose(J)*J)^(-1)}*transpose(J)*(func-data)
         JTJ = dot(J.T,J)
@@ -116,9 +103,7 @@ def LSfit(funct_str,data,X,param0, weights=-1, quiet=False, LM=False):
                 
         ## Levenberg-Marquardt update for mu
         if LM:
-            Pstr = _array2str(param)
-            f_str = funct_str+'('+Xstr+','+Pstr+')'
-            f = eval(f_str)
+            f = funct(X,param)
             Xhi2_new = sum(weights*(f-data)**2)
             if Xhi2_new > Xhi2:
                 mu = 10*mu
@@ -144,21 +129,3 @@ def LSfit(funct_str,data,X,param0, weights=-1, quiet=False, LM=False):
         print " "
     
     return param
-    
-
-
-
-###############################################################################
-#    Function to transform array to a string that can be used in eval(.)      #
-###############################################################################
-
-def _array2str(arr):
-    arrStr = str(arr)
-    arrStr = arrStr.replace('\n','')
-    arrStr = arrStr.replace(' ',',')
-    for i in arange(10):
-        arrStr = arrStr.replace(',,',',')
-    arrStr = arrStr.replace('[,','[')
-    arrStr = arrStr.replace(',]',']')
-    arrStr = 'array('+arrStr+')'
-    return arrStr
