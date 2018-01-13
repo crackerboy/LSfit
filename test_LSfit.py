@@ -21,7 +21,7 @@ from pylab import plot, legend, show
 
 print "-------------- Gaussian --------------"
 
-Npoints = 150
+Npoints = 100
 
 # DEFINE NOISY DATA
 X = linspace(0,10,num=Npoints)
@@ -77,7 +77,7 @@ plot(X,Ynoisy,'orange',linewidth=2)
 plot(X,Ytrue,'b',linewidth=3)
 plot(X,Ystart,'g',linewidth=2)
 plot(X,Yfit,'r',linewidth=2)
-legend(("True","Noisy","Start","Fit"))
+legend(("Noisy data","True curve","Init fitting","LSfit solution"))
 show()
 
 
@@ -85,6 +85,9 @@ show()
 ###                  MOFFAT using class LSparam
 ###     Check class LSparam from LSfit.py for more information
 ###############################################################################
+
+# I introduce on purpose bad constraints on the parameters to show you the effects
+# However this may lead to errors of convergence
 
 print "-------------- Moffat LSparam --------------"
 
@@ -95,8 +98,8 @@ Ynoisy = Ytrue + 2*(rand(Npoints)-.5)
 
 # MINIMIZATION
 param0 = LSparam([1.5,4.,1.5,5.5,3.])
-#param0.fixed = [False,False,True,False,False]
-param0.set_bound_down(1.2)
+param0.fixed = [False,False,True,False,False]
+#param0.set_bound_down(1.2)
 Ystart = moffat(X,param0.value)
 param = LSfit(moffat,Ynoisy,X,param0,LM=True,debug=0)
 Yfit = moffat(X,param)

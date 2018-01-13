@@ -68,7 +68,7 @@ def LSfit(funct,data,X,param0, weights=-1, quiet=False, LM=False, debug=False):
 
     J = zeros((sX,param.nb_param)) # Jacobian
     h = 1e-9 #step to compute Jacobian
-    
+    bad_cond = 1e10 #conditioning higher than this value is bad
     
     # STOPPING CONDITIONS
     J_min = 1e-5*param.nb_param**2 # stopping criteria based on small Jacobian
@@ -105,35 +105,28 @@ def LSfit(funct,data,X,param0, weights=-1, quiet=False, LM=False, debug=False):
         f = funct(array(X),param.value)
         
         ## Iterate over each parameter to compute derivative
-        for ip in arange(param.nb_param):
-            
+        for ip in arange(param.nb_param):          
             J[:,ip] = weights*(funct(array(X),param.value+h*param.one(ip))-f)/h
         
         ## Compute dvalue = -{(transpose(J)*J)^(-1)}*transpose(J)*(func-data)
         JTJ = dot(J.T,J)
+        
+        ## Test conditioning
+        c = cond(JTJ)
+        if c > bad_cond:
+            print "JT.J is really bad conditioned. Error might occur soon."
+
+         
+        ## Try inversion, here we might encounter numerical issues
         try:
             param.dvalue = - dot(dot(inv(JTJ+mu*diag(JTJ.diagonal())),J.T),weights*(f-data))
         except LinAlgError as exception_message:
             # These errors occur with bad conditionning
             # or when a line of JTJ is nul
-            print "LSFit encountered an error at iter = "+str(iteration)
-            print "mu = "+str(mu)
-            print "##### JTJ matrix #####"
-            _print_info_matrix(JTJ)
-            print "##### ########## #####"
-            print "##### Parameter #####"
-            print str(param.value)
-            print "##### ########## #####"
+            _print_info_on_error(JTJ,iteration,mu,param.value)
             raise LinAlgError(exception_message)
         except ValueError as exception_message:
-            print "LSFit encountered an error at iter = "+str(iteration)
-            print "mu = "+str(mu)
-            print "##### JTJ matrix #####"
-            _print_info_matrix(JTJ)
-            print "##### ########## #####"
-            print "##### Parameter #####"
-            print str(param.value)
-            print "##### ########## #####"
+            _print_info_on_error(JTJ,iteration,mu,param.value)
             raise ValueError(exception_message)
         
         # Step forward with dvalue
@@ -159,7 +152,7 @@ def LSfit(funct,data,X,param0, weights=-1, quiet=False, LM=False, debug=False):
                 mu = max(0.1*mu,1e-10)
         
         ## Stop loop based on small variation of parameter
-        if sum(abs(param.dvalue)) < dp_min*sum(abs(param.value)):
+        if param.dvalueNorm() < dp_min*param.valueNorm():
             stop_loop = True
             stop_trace = "Parameter not evolving enough at iter="+str(iteration)
         
@@ -202,6 +195,17 @@ def _print_info_matrix(M):
     for i in arange(len(M)):
         line_str = line_str + " " + _num2str(eig(M)[0][i])
     print "Eigenvalues: " + line_str + " ]"
+
+def _print_info_on_error(M,iteration,mu,values):
+    print "LSFit encountered an error at iter = "+str(iteration)
+    print "mu = "+str(mu)
+    print "##### JTJ matrix #####"
+    _print_info_matrix(M)
+    print "##### ########## #####"
+    print "##### Parameter #####"
+    print str(values)
+    print "##### ########## #####"
+
 
 def _num2str(x):
     if x==0:
@@ -263,6 +267,7 @@ class LSparam(object):
             self.valueInit = self.value
             self.valueOld = self.value
             self.dvalue = array([0 for i in arange(L)],dtype=float)
+            
         
     
     def copyLSparam(self,objToCopy):
@@ -307,6 +312,21 @@ class LSparam(object):
         conditionFIXED = 1 - array(self.fixed)
         self.value = self.value + self.dvalue * (conditionUP & conditionDOWN & conditionFIXED)
         
+    
+    def valueNorm(self):
+        """
+        Return norm_1 of value
+        """
+        nb_varying = sum(1 - array(self.fixed))
+        return sum(abs( self.value * (1 - array(self.fixed)) ))/nb_varying
+    
+    def dvalueNorm(self):
+        """
+        Return norm_1 of dvalue
+        """
+        nb_varying = sum(1 - array(self.fixed))
+        return sum(abs( self.dvalue * (1 - array(self.fixed)) ))/nb_varying
+    
     def check(self):
         """
         Check values consistency
