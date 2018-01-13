@@ -21,7 +21,7 @@ from pylab import plot, legend, show
 
 print "-------------- Gaussian --------------"
 
-Npoints = 200
+Npoints = 50
 
 # DEFINE NOISY DATA
 X = linspace(0,10,num=Npoints)
@@ -60,12 +60,11 @@ print "-------------- Moffat --------------"
 paramTrue = array([1.,5.,1.,5.,2.])
 Ytrue = moffat(X,paramTrue)
 Ynoisy = Ytrue + 2*(rand(Npoints)-.5)
-#Ynoisy = poisson(lam=Ytrue)
 
 # MINIMIZATION
 param0 = array([1.5,4.,2.,5.5,3.])
 Ystart = moffat(X,param0)
-param = LSfit(moffat,Ynoisy,X,param0,LM=True,quiet=True)
+param = LSfit(moffat,Ynoisy,X,param0,LM=True)
 Yfit = moffat(X,param)
 
 # SHOW RESULTS
