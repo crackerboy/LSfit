@@ -4,25 +4,19 @@ Created on Tue Jan 02 17:57:41 2018
 Updated on Sat Jan 13 13:01:00 2018
     Removed these ugly eval(.)
     Created class LSparam for bounding and fixing parameters
-
-INFORMATIONS
-Errors might occur due to bad matrix conditioning.
-This can be due to low number of data
-Please be careful with that.
+    Stabilized algo with matrix conditioning
 
 TO-DO
 - Create a LSfit2D(.)
 - Check Levenberg-Marquardt regularization
 - Check the WEIGHTED least-square convergence
-- Errors mights occur sometimes due to bad matrix conditioning
-    Improve matrix conditioning when (or before) a LinAlgError is raised
     
 Licence GNU-GPL v3.0
 
 @author: rfetick
 """
 
-from numpy import size, zeros, arange, array, dot, diag, floor, log10, inf, NaN
+from numpy import size, zeros, arange, array, dot, diag, eye, floor, log10, inf, NaN
 from numpy.linalg import cond, eig
 from scipy.linalg import inv, LinAlgError
 
@@ -65,6 +59,8 @@ def LSfit(funct,data,X,param0, weights=-1, quiet=False, LM=False, debug=False):
     # INITIALIZATION
     sX = size(X)
     param = LSparam(param0)
+    mu_cond = 0
+    Id = eye(param.nb_param) # Identity matrix for conditioning
 
     J = zeros((sX,param.nb_param)) # Jacobian
     h = 1e-9 #step to compute Jacobian
@@ -73,7 +69,7 @@ def LSfit(funct,data,X,param0, weights=-1, quiet=False, LM=False, debug=False):
     # STOPPING CONDITIONS
     J_min = 1e-5*param.nb_param**2 # stopping criteria based on small Jacobian
     dp_min = 1e-8 # stopping criteria based on small variation of parameters
-    max_iter = 1e4 # stopping criteria based on max number of iteration
+    max_iter = 1e5 # stopping criteria based on max number of iteration
     stop_loop = False # boolean for stopping the loop
     stop_trace = "Maximum iteration reached (iter="+str(max_iter)+")"
     
@@ -102,6 +98,8 @@ def LSfit(funct,data,X,param0, weights=-1, quiet=False, LM=False, debug=False):
     
     while (iteration < max_iter) and not stop_loop:
         
+        mu_cond = 0
+        
         f = funct(array(X),param.value)
         
         ## Iterate over each parameter to compute derivative
@@ -111,15 +109,15 @@ def LSfit(funct,data,X,param0, weights=-1, quiet=False, LM=False, debug=False):
         ## Compute dvalue = -{(transpose(J)*J)^(-1)}*transpose(J)*(func-data)
         JTJ = dot(J.T,J)
         
-        ## Test conditioning
+        ## Try to improve conditioning
         c = cond(JTJ)
         if c > bad_cond:
-            print "JT.J is really bad conditioned. Error might occur soon."
+            mu_cond = _improve_cond(JTJ,bad_cond,Id)
 
          
         ## Try inversion, here we might encounter numerical issues
         try:
-            param.dvalue = - dot(dot(inv(JTJ+mu*diag(JTJ.diagonal())),J.T),weights*(f-data))
+            param.dvalue = - dot(dot(inv(JTJ+mu*diag(JTJ.diagonal())+mu_cond*Id),J.T),weights*(f-data))
         except LinAlgError as exception_message:
             # These errors occur with bad conditionning
             # or when a line of JTJ is nul
@@ -141,6 +139,7 @@ def LSfit(funct,data,X,param0, weights=-1, quiet=False, LM=False, debug=False):
             if LM:
                 print "[Iter="+str(iteration)+"] mu = "+str(mu)
             print "[Iter="+str(iteration)+"] Conditioning = "+_num2str(cond(JTJ))
+            print "[Iter="+str(iteration)+"] mu_cond = "+str(mu_cond)
                 
         ## Levenberg-Marquardt update for mu
         if LM:
@@ -226,6 +225,18 @@ def _num2str(x):
         num_str = ('%.2f' % (x/10**power)) + "e" + str_power
 
     return num_str
+
+
+###############################################################################
+#                   Improve conditioning                                      #
+###############################################################################
+def _improve_cond(M,bad_cond,Id):
+    mu = 1e-10
+    while cond(M+mu*Id) > bad_cond and mu<1e10:
+        mu = 10*mu
+    return mu
+    
+
 
 ###############################################################################
 #                   Define a class to precise parameters                      #

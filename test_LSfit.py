@@ -21,7 +21,7 @@ from pylab import plot, legend, show
 
 print "-------------- Gaussian --------------"
 
-Npoints = 100
+Npoints = 30
 
 # DEFINE NOISY DATA
 X = linspace(0,10,num=Npoints)
@@ -64,14 +64,14 @@ Ynoisy = Ytrue + 2*(rand(Npoints)-.5)
 # MINIMIZATION
 param0 = array([1.5,4.,2.,5.5,3.])
 Ystart = moffat(X,param0)
-param = LSfit(moffat,Ynoisy,X,param0,LM=True,debug=0)
+param = LSfit(moffat,Ynoisy,X,param0,LM=True,debug=10)
 Yfit = moffat(X,param)
 
 # SHOW RESULTS
 print "Param      : [bck,amp,sig,mid,pow]"
 print "Param true : "+str(paramTrue)
 print "Param start: "+str(param0)
-print "Param fit  : "+str(floor(param*100)/100.0)
+print "Param fit  : "+str(floor(param*100)/500.0)
 
 plot(X,Ynoisy,'orange',linewidth=2)
 plot(X,Ytrue,'b',linewidth=3)
@@ -101,7 +101,7 @@ param0 = LSparam([1.5,4.,1.5,5.5,3.])
 param0.fixed = [False,False,True,False,False]
 #param0.set_bound_down(1.2)
 Ystart = moffat(X,param0.value)
-param = LSfit(moffat,Ynoisy,X,param0,LM=True,debug=0)
+param = LSfit(moffat,Ynoisy,X,param0,LM=True,debug=1000)
 Yfit = moffat(X,param)
 
 # SHOW RESULTS
