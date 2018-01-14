@@ -5,6 +5,9 @@ Updated on Sat Jan 13 13:01:00 2018
     Removed these ugly eval(.)
     Created class LSparam for bounding and fixing parameters
     Stabilized algo with matrix conditioning
+Updated on Sun Jan 14 21:26:00 2018
+    Improved boundaries conditions and check
+    Removed fixed params from inversion of JTJ
 
 TO-DO
 - Create a LSfit2D(.)
@@ -59,8 +62,9 @@ def LSfit(funct,data,X,param0, weights=-1, quiet=False, LM=False, debug=False):
     # INITIALIZATION
     sX = size(X)
     param = LSparam(param0)
+    param.initParam()
     mu_cond = 0
-    Id = eye(param.nb_param) # Identity matrix for conditioning
+    Id = eye(param.nb_valid_param) # Identity matrix for conditioning
 
     J = zeros((sX,param.nb_param)) # Jacobian
     h = 1e-9 #step to compute Jacobian
@@ -69,7 +73,7 @@ def LSfit(funct,data,X,param0, weights=-1, quiet=False, LM=False, debug=False):
     # STOPPING CONDITIONS
     J_min = 1e-5*param.nb_param**2 # stopping criteria based on small Jacobian
     dp_min = 1e-8 # stopping criteria based on small variation of parameters
-    max_iter = 1e5 # stopping criteria based on max number of iteration
+    max_iter = 1e4 # stopping criteria based on max number of iteration
     stop_loop = False # boolean for stopping the loop
     stop_trace = "Maximum iteration reached (iter="+str(max_iter)+")"
     
@@ -106,21 +110,20 @@ def LSfit(funct,data,X,param0, weights=-1, quiet=False, LM=False, debug=False):
         for ip in arange(param.nb_param):          
             J[:,ip] = weights*(funct(array(X),param.value+h*param.one(ip))-f)/h
         
-        ## Compute dvalue = -{(transpose(J)*J)^(-1)}*transpose(J)*(func-data)
-        JTJ = dot(J.T,J)
+        ## Compute dvalue = -{(transpose(J)*J)^(-1)}*transpose(J)*(weights*(func-data))
+        ## Reduce the matrix J only on the moving parameters
+        JTJ = dot(J[:,param.validValue].T,J[:,param.validValue])
         
         ## Try to improve conditioning
-        c = cond(JTJ)
+        c = cond(JTJ+mu*diag(JTJ.diagonal()))
         if c > bad_cond:
-            mu_cond = _improve_cond(JTJ,bad_cond,Id)
+            mu_cond = _improve_cond(JTJ+mu*diag(JTJ.diagonal()),bad_cond,Id)
 
          
         ## Try inversion, here we might encounter numerical issues
         try:
-            param.dvalue = - dot(dot(inv(JTJ+mu*diag(JTJ.diagonal())+mu_cond*Id),J.T),weights*(f-data))
+            param.dvalue[param.validValue] = - dot(dot(inv(JTJ+mu*diag(JTJ.diagonal())+mu_cond*Id),J[:,param.validValue].T),weights*(f-data))
         except LinAlgError as exception_message:
-            # These errors occur with bad conditionning
-            # or when a line of JTJ is nul
             _print_info_on_error(JTJ,iteration,mu,param.value)
             raise LinAlgError(exception_message)
         except ValueError as exception_message:
@@ -133,7 +136,7 @@ def LSfit(funct,data,X,param0, weights=-1, quiet=False, LM=False, debug=False):
         ## Xhi square
         Xhi2 = sum(weights*(f-data)**2)
         
-        ## Print Xhi square
+        ## DEBUG MODE: Print Xhi square and some info
         if debug and (iteration % debug)==0:
             print "[Iter="+str(iteration)+"] Xhi2 = "+str(Xhi2)
             if LM:
@@ -156,7 +159,7 @@ def LSfit(funct,data,X,param0, weights=-1, quiet=False, LM=False, debug=False):
             stop_trace = "Parameter not evolving enough at iter="+str(iteration)
         
         ## Stop loop based on small Jacobian
-        if abs(J).sum() < J_min:
+        if abs(J[:,param.validValue]).sum() < J_min:
             stop_loop = True
             stop_trace = "Jacobian small enough at iter="+str(iteration)
         
@@ -278,8 +281,11 @@ class LSparam(object):
             self.valueInit = self.value
             self.valueOld = self.value
             self.dvalue = array([0 for i in arange(L)],dtype=float)
+            self.validValue = [i for i in arange(L)] #indices of not fixed parameters
+            self.nb_valid_param = L
             
-        
+    def __repr__(self):
+        return "LSparam with "+str(self.nb_param)+" parameters"
     
     def copyLSparam(self,objToCopy):
         """
@@ -323,6 +329,20 @@ class LSparam(object):
         conditionFIXED = 1 - array(self.fixed)
         self.value = self.value + self.dvalue * (conditionUP & conditionDOWN & conditionFIXED)
         
+    def initParam(self):
+        """
+        Be sure that everyhing is allright before going on
+        """
+        self.check()
+        self.nb_param = len(self.value)
+        self.valueInit = self.value
+        self.valueOld = self.value
+        self.dvalue = array([0 for i in arange(self.nb_param)],dtype=float)
+        self.validValue = []
+        for i in arange(self.nb_param):
+            if not self.fixed[i]:
+                self.validValue.append(i)
+        self.nb_valid_param = len(self.validValue)
     
     def valueNorm(self):
         """
@@ -342,11 +362,26 @@ class LSparam(object):
         """
         Check values consistency
         """
-        if inf in self.value:
-            return False
-        if NaN in self.value:
-            return False
-        return True
+        a=array([len(self.bound_down),len(self.bound_up),len(self.is_bound_down),len(self.is_bound_up)])
+        if sum(abs(a-len(self.value))):
+            raise ValueError("Number of elements mismatch")
+        for i in arange(len(self.value)):
+            if not self.fixed[i] and self.value[i] in [-inf,inf]:
+                raise ValueError("Parameter number "+str(i)+" is infinite")
+            if self.is_bound_down[i]:
+                if self.is_bound_up[i] and self.bound_down[i]>self.bound_up[i]:
+                    raise ValueError("Bound_down number "+str(i)+" is higher than its bound_up")
+                if self.value[i] < self.bound_down[i]:
+                    raise ValueError("Paramter number "+str(i)+" is initialized lower than its bound_down")
+            if self.is_bound_up[i]:
+                if self.value[i] > self.bound_up[i]:
+                    raise ValueError("Paramter number "+str(i)+" is initialized higher than its bound_up")
+            
+#        if inf in self.value:
+#            return False
+#        if NaN in self.value:
+#            return False
+#        return True
         
     def set_bound_down(self,val):
         """
