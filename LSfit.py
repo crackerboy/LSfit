@@ -60,7 +60,8 @@ def LSfit(funct,data,X,param0, weights=-1, quiet=False, LM=False, debug=False):
      param   - [Vector] Best parameters for least-square fitting
     """
     # INITIALIZATION
-    sX = size(X)
+    Xarr = array(X)
+    sX = size(Xarr)
     param = LSparam(param0)
     param.initParam()
     mu_cond = 0
@@ -91,7 +92,7 @@ def LSfit(funct,data,X,param0, weights=-1, quiet=False, LM=False, debug=False):
     # Print some information
     if not quiet:
         print param.value
-        f = funct(array(X),param.value)
+        f = funct(Xarr,param.value)
         Xhi2 = sum(weights*(f-data)**2)
         print "[Iter=0] Xhi2 = "+str(Xhi2)
     
@@ -99,30 +100,30 @@ def LSfit(funct,data,X,param0, weights=-1, quiet=False, LM=False, debug=False):
     # LOOP
     
     iteration = 0
+    f = funct(Xarr,param.value)
     
     while (iteration < max_iter) and not stop_loop:
         
         mu_cond = 0
         
-        f = funct(array(X),param.value)
-        
         ## Iterate over each parameter to compute derivative
-        for ip in arange(param.nb_param):          
-            J[:,ip] = weights*(funct(array(X),param.value+h*param.one(ip))-f)/h
+        for ip in param.validValue:          
+            J[:,ip] = weights*(funct(Xarr,param.value+h*param.one(ip))-f)/h
         
         ## Compute dvalue = -{(transpose(J)*J)^(-1)}*transpose(J)*(weights*(func-data))
         ## Reduce the matrix J only on the moving parameters
         JTJ = dot(J[:,param.validValue].T,J[:,param.validValue])
+        JTJ += mu*diag(JTJ.diagonal())
         
         ## Try to improve conditioning
-        c = cond(JTJ+mu*diag(JTJ.diagonal()))
+        c = cond(JTJ)
         if c > bad_cond:
-            mu_cond = _improve_cond(JTJ+mu*diag(JTJ.diagonal()),bad_cond,Id)
+            mu_cond = _improve_cond(JTJ,bad_cond,Id)
 
          
         ## Try inversion, here we might encounter numerical issues
         try:
-            param.dvalue[param.validValue] = - dot(dot(inv(JTJ+mu*diag(JTJ.diagonal())+mu_cond*Id),J[:,param.validValue].T),weights*(f-data))
+            param.dvalue[param.validValue] = - dot(dot(inv(JTJ+mu_cond*Id),J[:,param.validValue].T),weights*(f-data))
         except LinAlgError as exception_message:
             _print_info_on_error(JTJ,iteration,mu,param.value)
             raise LinAlgError(exception_message)
@@ -130,11 +131,12 @@ def LSfit(funct,data,X,param0, weights=-1, quiet=False, LM=False, debug=False):
             _print_info_on_error(JTJ,iteration,mu,param.value)
             raise ValueError(exception_message)
         
+        ## Xhi square old
+        Xhi2 = sum(weights*(f-data)**2)
         # Step forward with dvalue
         param.step()
-        
-        ## Xhi square
-        Xhi2 = sum(weights*(f-data)**2)
+        # New value of f(.)
+        f = funct(Xarr,param.value)
         
         ## DEBUG MODE: Print Xhi square and some info
         if debug and (iteration % debug)==0:
@@ -146,7 +148,6 @@ def LSfit(funct,data,X,param0, weights=-1, quiet=False, LM=False, debug=False):
                 
         ## Levenberg-Marquardt update for mu
         if LM:
-            f = funct(X,param.value)
             Xhi2_new = sum(weights*(f-data)**2)
             if Xhi2_new > Xhi2:
                 mu = min(10*mu,1e10)

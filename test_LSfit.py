@@ -108,6 +108,7 @@ Yfit = moffat(X,param)
 print "Param      : [bck,amp,sig,mid,pow]"
 print "Param true : "+str(paramTrue)
 print "Param start: "+str(param0.value)
+print "Param fixed: "+str(param0.fixed)
 print "Param fit  : "+str(floor(param*100)/100.0)
 
 plot(X,Ynoisy,'orange',linewidth=2)
