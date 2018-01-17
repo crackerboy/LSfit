@@ -17,4 +17,9 @@ Some functions you may need for fitting, such as Gaussian and Moffat (both in 1D
 ### Test_***
 Test files. Feel free to use them to handle LSfit
 
+---
+
+## Example
+We want to retrieve a function (blue) describing a physical process. However the observed data (yellow) is corrupted with noise. The user provides a first estimate (green) of the function, and LSfit returns the least square fitting (red) that best matches the function.
+
 ![alt text](image_exemple_LSfit.png "Moffat fitting with LSfit")
