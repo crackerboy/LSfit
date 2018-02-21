@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 """
 Created on Wed Jan 10 23:17:57 2018
+Updated on Tue Feb 20 20:00:00 2018
+    Parameters are converted to float to prevent integer processing
 
 @author: rfetick
 """
 
-from numpy import exp, cos, sin
+from numpy import exp, cos, sin, array
 
 ###############################################################################
 ###############################################################################
@@ -22,6 +24,7 @@ def gauss(X,A):
     A[2]   Sigma
     A[3]   Peak centroid
     """
+    A = array(A).astype(float)
     return A[1]*exp(-((X-A[3])**2)/(2*A[2]**2))+A[0]
 
 ###############################################################################
@@ -42,6 +45,7 @@ def gauss2D(X,Y,A):
     A[5]   Peak centroid (y)
     A[6]   Tilt angle (clockwise)
     """
+    A = array(A).astype(float)
     
     alpha_X = A[2]
     alpha_Y = A[3]
@@ -74,7 +78,9 @@ def moffat(X,A):
     ### OUTPUT ###
     Y the Moffat function evaluated on the X coordinates
     """
-
+    
+    A = array(A).astype(float)
+    
     # Compute Moffat
     u  = ((X-A[3])/A[2])**2
     moff = A[1]/(u + 1.)**A[4] + A[0]
@@ -102,6 +108,8 @@ def moffat2D(X,Y,A):
     ### OUTPUT ###
     The 2D-Moffat evaluated on the meshgrid
     """
+    
+    A = array(A).astype(float)
     
     alpha_X = A[2]
     alpha_Y = A[3]
