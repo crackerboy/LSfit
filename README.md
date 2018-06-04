@@ -23,3 +23,8 @@ Test files. Feel free to use them to handle LSfit
 We want to retrieve a function (blue) describing a physical process. However the observed data (yellow) is corrupted with noise. The user provides a first estimate (green) of the function, and LSfit returns the least square fitting (red) that best matches the function.
 
 ![alt text](image_exemple_LSfit.png "Moffat fitting with LSfit")
+
+## Example 2D
+We want to retrieve a function (blue) describing a physical process. However the observed data (yellow) is corrupted with noise. The user provides a first estimate (green) of the function, and LSfit returns the least square fitting (red) that best matches the function.
+
+![alt text](image_exemple_LSfit2D.png "2D gaussian fitting with LSfit")
