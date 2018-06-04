@@ -8,9 +8,11 @@ Updated on Sat Jan 13 13:01:00 2018
 Updated on Sun Jan 14 21:26:00 2018
     Improved boundaries conditions and check
     Removed fixed params from inversion of JTJ
+Updated on Mon Jun 04 19:30:00 2018
+    Added extension LSfit2D
 
 TO-DO
-- Create a LSfit2D(.)
+- Check LSfit2D(.)
 - Check Levenberg-Marquardt regularization
 - Check the WEIGHTED least-square convergence
     
@@ -22,6 +24,44 @@ Licence GNU-GPL v3.0
 from numpy import size, zeros, arange, array, dot, diag, eye, floor, log10, inf, NaN
 from numpy.linalg import cond, eig
 from scipy.linalg import inv, LinAlgError
+
+###############################################################################
+#                         LSfit2D main function                               #
+###############################################################################
+
+def LSfit2D(funct,data,X,Y,param0, weights=-1, quiet=False, LM=False, debug=False):
+    """
+    #####  USAGE  #####
+     Similar as LSfit
+     "funct", "data", "X", "Y" and eventually "weights" should be 2D arrays
+    """
+    global LSfit2DfunctUSER
+    LSfit2DfunctUSER = funct
+    
+    global LSfit2DxUSER
+    LSfit2DxUSER = X
+    
+    global LSfit2DyUSER
+    LSfit2DyUSER = Y
+    
+    if size(weights) > 1:
+        weights = weights.flatten()
+        
+    param = LSfit(LFfitFUNCT,data.flatten(),X.flatten(),param0, weights=weights, quiet=quiet, LM=LM, debug=debug)
+    
+    return param
+
+
+def LFfitFUNCT(X,param):
+    """
+    Function to be called in internal
+    """
+    return (LSfit2DfunctUSER(LSfit2DxUSER,LSfit2DyUSER,param)).flatten()
+
+###############################################################################
+#                         LSfit main function                                 #
+###############################################################################
+    
 
 def LSfit(funct,data,X,param0, weights=-1, quiet=False, LM=False, debug=False):
     """ 
@@ -202,9 +242,9 @@ def _print_info_matrix(M):
 def _print_info_on_error(M,iteration,mu,values):
     print "LSFit encountered an error at iter = "+str(iteration)
     print "mu = "+str(mu)
-    print "##### JTJ matrix #####"
-    _print_info_matrix(M)
-    print "##### ########## #####"
+#    print "##### JTJ matrix #####"
+#    _print_info_matrix(M)
+#    print "##### ########## #####"
     print "##### Parameter #####"
     print str(values)
     print "##### ########## #####"
