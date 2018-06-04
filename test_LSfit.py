@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 Created on Thu Jan 04 17:51:47 2018
+Updated on Mon Jun 04 19:30:00 2018
+    Added test for LSfit2D
 
 Test the LSfit method
 Be sure to import the 'gauss' method to run this test
@@ -116,4 +118,52 @@ plot(X,Ytrue,'b',linewidth=3)
 plot(X,Ystart,'g',linewidth=2)
 plot(X,Yfit,'r',linewidth=2)
 legend(("Noisy data","True curve","Init fitting","LSfit solution"))
+show()
+
+###############################################################################
+###         Gaussian 2D
+###############################################################################
+
+xmax = 50
+[X,Y] = mgrid[0:xmax,0:xmax]
+A = zeros(7)
+A[1] = 1
+A[2] = 10
+A[3] = 10
+A[4] = xmax/2
+A[5] = xmax/2
+Gtrue = gauss2D(X,Y,A)
+
+pcolor(Gtrue)
+axis('equal')
+title("2D Gauss")
+show()
+
+Gnoisy = Gtrue + 1.*(rand(xmax,xmax)-.5)
+
+pcolor(Gnoisy)
+axis('equal')
+title("2D Gauss")
+show()
+
+Ainit = A
+Ainit[1] = 0.8
+Ainit[2] = 7.0
+Ainit[4] += 10.
+
+Ginit = gauss2D(X,Y,Ainit)
+
+param = LSfit2D(gauss2D,Gnoisy,X,Y,Ainit,LM=True,debug=10)
+Gfit = gauss2D(X,Y,param)
+
+
+Gplot = zeros([xmax,xmax*4])
+Gplot[:,0:xmax] = Gtrue
+Gplot[:,xmax:2*xmax] = Gnoisy
+Gplot[:,2*xmax:3*xmax] = Ginit
+Gplot[:,3*xmax:4*xmax] = Gfit
+
+pcolor(Gplot)
+axis('equal')
+title("2D Gauss (true, noisy, init, fit)")
 show()
