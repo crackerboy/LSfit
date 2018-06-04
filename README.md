@@ -25,6 +25,6 @@ We want to retrieve a function (blue) describing a physical process. However the
 ![alt text](image_exemple_LSfit.png "Moffat fitting with LSfit")
 
 ## Example 2D
-We want to retrieve a function (blue) describing a physical process. However the observed data (yellow) is corrupted with noise. The user provides a first estimate (green) of the function, and LSfit returns the least square fitting (red) that best matches the function.
+Here is an example in 2D, using a Gaussian function. From left to right: true function, noisy observed data, user guess, LSfit2D solution.
 
 ![alt text](image_exemple_LSfit2D.png "2D gaussian fitting with LSfit")
