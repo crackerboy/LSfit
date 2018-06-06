@@ -27,4 +27,4 @@ We want to retrieve a function (blue) describing a physical process. However the
 ## Example 2D
 Here is an example in 2D, using a Gaussian function. From left to right: true function, noisy observed data, user guess, LSfit2D solution.
 
-![alt text](image_exemple_LSfit2D.png "2D gaussian fitting with LSfit")
+![alt text](image_exemple_LSfit2D.png "2D gaussian fitting with LSfit" width="48")
