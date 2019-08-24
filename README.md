@@ -5,6 +5,8 @@ Created in January 2018
 
 Updated on June 16th, 2018
 
+Please try the `scipy` minimization library before this one! The scipy one might be more robust.
+
 I provide my code here if you need it, however be aware that you might find better fitting libraries on GitHub!!! You can send your questions or your comments on https://groups.google.com/d/forum/lsfit
 
 ### LSfit
